@@ -21,11 +21,11 @@
     "svelte": "^3.0.0",
     "svelte-check": "^1.0.0",
     "svelte-preprocess": "^4.0.0",
-    "svelthree": "^0.119.0-5",
     "tslib": "^2.0.0",
     "typescript": "^4.0.0"
   },
   "dependencies": {
-    "sirv-cli": "^1.0.0"
+    "sirv-cli": "^1.0.0",
+    "three": "^0.126.1"
   }
 }
