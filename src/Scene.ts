@@ -24,8 +24,6 @@ const _camera = new PerspectiveCamera(fov, aspect, near, far);
 let _loader;
 let _renderer;
 let _controls;
-let _mixers = [];
-let _previousRAF = null;
 let _animationsFolder;
 let _character: BasicCharacter;
 const _clock = new Clock();
@@ -55,15 +53,15 @@ function setupLight() {
 
 function setupControls() {
 
-    const controls = new OrbitControls(
+    _controls = new OrbitControls(
         _camera, _renderer.domElement
     );
-    controls.target.set(0, 1, 0);
-    controls.update();
+    _controls.target.set(0, 1, 0);
+    _controls.update();
 }
 
 function loadModels() {
-    _character = new BasicCharacter("Vanguard", _scene);
+    _character = new BasicCharacter("Vanguard", _scene, _animationsFolder);
 }
 
 function loadSceneAssets() {
@@ -120,31 +118,14 @@ function setupGUI() {
 }
 
 
-let animations = {
-    default: function () {
-        _character.setDefaultAction();
-    },
-    samba: function () {
-        _character.setSambaAction();
-    },
-    bellydance: function () {
-        _character.setBellyDanceAction();
-    },
-    goofyRunning: function () {
-        _character.setGoofyRunAction();
-    },
-}
-
-
-
 export function createScene(el) {
     _renderer = new WebGLRenderer({ antialias: true, canvas: el });
     resize();
     setupLight();
     setupControls();
+    setupGUI();
     loadSceneAssets();
     loadModels();
-    setupGUI();
     animate();
 }
 
