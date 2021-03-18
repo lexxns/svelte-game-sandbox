@@ -1,27 +1,35 @@
 import {
-    AmbientLight, CubeTextureLoader,
+    AmbientLight,
+    AxesHelper,
+    Clock,
+
+    CubeTextureLoader,
     DirectionalLight,
     Mesh, MeshStandardMaterial,
     PerspectiveCamera, PlaneGeometry,
-
-
     Scene, WebGLRenderer
 } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
+import { GUI } from 'three/examples/jsm/libs/dat.gui.module';
+import { BasicCharacter } from './BasicCharacter';
 
 const _scene = new Scene();
 
-const fov = 60;
-const aspect = 1920 / 1080;
-const near = 1.0;
+const fov = 75;
+const aspect = window.innerWidth / window.innerHeight;
+const near = 0.1;
 const far = 1000.0;
 const _camera = new PerspectiveCamera(fov, aspect, near, far);
 
 let _loader;
 let _renderer;
-let _controls
-_camera.position.z = 5;
+let _controls;
+let _mixers = [];
+let _previousRAF = null;
+let _animationsFolder;
+let _character: BasicCharacter;
+const _clock = new Clock();
+_camera.position.set(0.8, 1.4, 1.0);
 
 function setupLight() {
     let light = new DirectionalLight(0xFFFFFF, 1.0);
@@ -50,22 +58,18 @@ function setupControls() {
     const controls = new OrbitControls(
         _camera, _renderer.domElement
     );
-    controls.target.set(0, 20, 0);
+    controls.target.set(0, 1, 0);
     controls.update();
 }
 
-function loadModel() {
-    const loader = new FBXLoader();
-    loader.load("./resources/models/maria.fbx", (fbx) => {
-        fbx.scale.setScalar(0.1);
-        fbx.traverse(c => {
-            c.castShadow = true;
-        });
-        _scene.add(fbx);
-    });
+function loadModels() {
+    _character = new BasicCharacter("Vanguard", _scene);
 }
 
 function loadSceneAssets() {
+    const axesHelper = new AxesHelper(5);
+    _scene.add(axesHelper);
+
     _loader = new CubeTextureLoader();
     let texture = _loader.load([
         "./resources/skycube/posx.jpg",
@@ -86,16 +90,52 @@ function loadSceneAssets() {
     _scene.add(plane);
 }
 
-function animate() {
-    requestAnimationFrame(animate);
-    _renderer.render(_scene, _camera);
-};
-
 function resize() {
     _renderer.setSize(window.innerWidth, window.innerHeight)
     _camera.aspect = window.innerWidth / window.innerHeight;
     _camera.updateProjectionMatrix();
 };
+
+
+function animate() {
+    requestAnimationFrame(animate);
+
+    _controls.update();
+
+    if (_character._modelReady) {
+        _character._mixer.update(_clock.getDelta());
+
+        render();
+    }
+}
+
+function render() {
+    _renderer.render(_scene, _camera);
+}
+
+function setupGUI() {
+    const gui = new GUI();
+    _animationsFolder = gui.addFolder("Animations")
+    _animationsFolder.open()
+}
+
+
+let animations = {
+    default: function () {
+        _character.setDefaultAction();
+    },
+    samba: function () {
+        _character.setSambaAction();
+    },
+    bellydance: function () {
+        _character.setBellyDanceAction();
+    },
+    goofyRunning: function () {
+        _character.setGoofyRunAction();
+    },
+}
+
+
 
 export function createScene(el) {
     _renderer = new WebGLRenderer({ antialias: true, canvas: el });
@@ -103,7 +143,8 @@ export function createScene(el) {
     setupLight();
     setupControls();
     loadSceneAssets();
-    loadModel();
+    loadModels();
+    setupGUI();
     animate();
 }
 
