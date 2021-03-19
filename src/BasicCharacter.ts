@@ -9,6 +9,7 @@ export class BasicCharacter {
     _activeAction: AnimationAction;
     _lastAction: AnimationAction;
     _loader: FBXLoader = new FBXLoader();
+    characterMesh;
 
     constructor(name: String, scene: Scene, animationsFolder) {
         this._loader.load(`./resources/models/${name}.fbx`, (character) => {
@@ -19,10 +20,10 @@ export class BasicCharacter {
                 "default": () => {
                     this.setAction(this._animationActions.get("default"));
                 },
-                "Samba" : () => {
+                "Samba": () => {
                     this.setAction(this._animationActions.get("Samba"));
                 },
-                "Belly_Dance" : () => {
+                "Belly_Dance": () => {
                     this.setAction(this._animationActions.get("Belly_Dance"));
                 },
                 "Goofy_Run": () => {
@@ -33,8 +34,9 @@ export class BasicCharacter {
             let animationAction = this._mixer.clipAction(character.animations[0]);
             this._animationActions.set("default", animationAction);
             animationsFolder.add(animations, "default");
-            this._activeAction = this._animationActions[0];
+            this._activeAction = this._animationActions.get("default");
             scene.add(character);
+            this.characterMesh = character;
 
             for (let key of ["Samba", "Belly_Dance", "Goofy_Run"]) {
                 this._loader.load(`./resources/animations/${key}.fbx`, (obj) => {
@@ -53,10 +55,15 @@ export class BasicCharacter {
 
     setAction = (toAction: AnimationAction) => {
         if (toAction != this._activeAction) {
-            this._lastAction = this._activeAction
-            this._activeAction = toAction
-            //lastAction.stop()
-            this._lastAction.fadeOut(1)
+            if (!this._activeAction) {
+                this._activeAction = toAction
+                this._lastAction = this._activeAction
+            } else {
+                this._lastAction = this._activeAction
+                this._activeAction = toAction
+                //lastAction.stop()
+                this._lastAction.fadeOut(1)
+            }
             this._activeAction.reset()
             this._activeAction.fadeIn(1)
             this._activeAction.play()

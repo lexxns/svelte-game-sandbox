@@ -1,12 +1,11 @@
+import * as TWEEN from '@tweenjs/tween.js';
 import {
     AmbientLight,
     AxesHelper,
-    Clock,
-
-    CubeTextureLoader,
-    DirectionalLight,
-    Mesh, MeshStandardMaterial,
+    Clock, CubeTextureLoader,
+    DirectionalLight, Matrix4, Mesh, MeshStandardMaterial,
     PerspectiveCamera, PlaneGeometry,
+    Quaternion, Raycaster,
     Scene, WebGLRenderer
 } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
@@ -21,6 +20,8 @@ const near = 0.1;
 const far = 1000.0;
 const _camera = new PerspectiveCamera(fov, aspect, near, far);
 
+let sceneMeshes = new Array()
+
 let _loader;
 let _renderer;
 let _controls;
@@ -28,6 +29,9 @@ let _animationsFolder;
 let _character: BasicCharacter;
 const _clock = new Clock();
 _camera.position.set(0.8, 1.4, 1.0);
+
+const _raycaster = new Raycaster();
+const _targetQuaternion = new Quaternion;
 
 function setupLight() {
     let light = new DirectionalLight(0xFFFFFF, 1.0);
@@ -86,6 +90,7 @@ function loadSceneAssets() {
     plane.receiveShadow = true;
     plane.rotation.x = -Math.PI / 2;
     _scene.add(plane);
+    sceneMeshes.push(plane);
 }
 
 function resize() {
@@ -102,9 +107,14 @@ function animate() {
 
     if (_character._modelReady) {
         _character._mixer.update(_clock.getDelta());
-
-        render();
+        if (!_character.characterMesh.quaternion.equals(_targetQuaternion)) {
+            _character.characterMesh.quaternion.rotateTowards(_targetQuaternion, _clock.getDelta() * 10);
+        }
     }
+
+    TWEEN.update();
+
+    render();
 }
 
 function render() {
@@ -117,6 +127,46 @@ function setupGUI() {
     _animationsFolder.open()
 }
 
+function setupClickMove() {
+    _renderer.domElement.addEventListener('dblclick', onDoubleClick, false);
+}
+
+function onDoubleClick(event) {
+    const mouse = {
+        x: (event.clientX / _renderer.domElement.clientWidth) * 2 - 1,
+        y: -(event.clientY / _renderer.domElement.clientHeight) * 2 + 1
+    }
+    _raycaster.setFromCamera(mouse, _camera);
+
+    const intersects = _raycaster.intersectObjects(sceneMeshes, false);
+
+    if (intersects.length > 0) {
+        const p = intersects[0].point;
+        const distance = _character.characterMesh.position.distanceTo(p);
+
+        const rotationMatrix = new Matrix4();
+        rotationMatrix.lookAt(p, _character.characterMesh.position, _character.characterMesh.up);
+        _targetQuaternion.setFromRotationMatrix(rotationMatrix);
+
+        _character.setAction(_character._animationActions.get("Goofy_Run"));
+
+        TWEEN.removeAll();
+        new TWEEN.Tween(_character.characterMesh.position)
+            .to({
+                x: p.x, y: p.y, z: p.z
+            }, 1000 / 2.2 * distance)
+            .onUpdate(() => {
+                _controls.target.set(
+                    _character.characterMesh.position.x,
+                    _character.characterMesh.position.y + 1,
+                    _character.characterMesh.position.z);
+            }).start()
+            .onComplete(() => {
+                _character.setAction(_character._animationActions.get("Belly_Dance"));
+            });
+    }
+}
+
 
 export function createScene(el) {
     _renderer = new WebGLRenderer({ antialias: true, canvas: el });
@@ -126,6 +176,7 @@ export function createScene(el) {
     setupGUI();
     loadSceneAssets();
     loadModels();
+    setupClickMove();
     animate();
 }
 
